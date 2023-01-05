@@ -1,17 +1,15 @@
-/**
- * W1715753 | 2017321
- * Hirantha Waas
- */
 package SharedPrinterModel;
 
-public abstract class Technician extends Thread{
+import SharedPrinterModel.Interfaces.Printer;
 
-    protected LaserPrinter laserPrinter;
+/**
+ * Represents a Technician who overlooks the printer
+ */
+public abstract class Technician extends Thread {
+    protected Printer printer;
 
-    // default constructor
-    public Technician(String name, ThreadGroup group,LaserPrinter laserPrinter){
-        super(group,name);
-        this.laserPrinter = laserPrinter;
+    public Technician(String name, ThreadGroup threadGroup, Printer printer) {
+        super(threadGroup, name);
+        this.printer = printer;
     }
-
 }

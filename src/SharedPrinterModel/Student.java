@@ -1,48 +1,65 @@
-/**
- * W1715753 | 2017321
- * Hirantha Waas
- */
-
 package SharedPrinterModel;
+
+import SharedPrinterModel.Interfaces.Printer;
+import SharedPrinterModel.utils.Logger;
+import SharedPrinterModel.utils.Utility;
 
 import java.util.Random;
 
-public class Student extends Thread{
+public class Student extends Thread {
 
-    private LaserPrinter laserPrinter;
+    private Printer printer;
 
-    public Student(String name,ThreadGroup threadGroup, LaserPrinter laserPrinter) {
-        super(threadGroup,name);
-        this.laserPrinter = laserPrinter;
+    public Student(String name,ThreadGroup threadGroup, Printer printer) {
+        super(threadGroup, name);
+        this.printer = printer;
     }
 
     @Override
-    public void run(){
-        for(int i=0;i<5;i++){
-            Document document= new Document(this.getName(),"Document"+i+i,getPageNumber());
-            this.laserPrinter.printDocument(document);
-            System.out.println(this);
-            try{
-                sleep(getRandomDuration());
-            }catch (InterruptedException ex){
-                System.out.println(ex.toString());
+    public void run() {
+        for (int i = 0; i < 5; i++) {
+            String documentName = "doc_" + (i + 1);
+            Document document = new Document(
+                    generateDocumentID(this.getName(), documentName),
+                    documentName,
+                    generateRandomPageCount());
+
+            Utility.log(
+                    Logger.STUDENT,
+                    "[" + this.getName() + "] Requested to print: " + document,
+                    null);
+
+            printer.printDocument(document);
+
+            Utility.log(
+                    Logger.STUDENT,
+                    "Printer status. " + printer.toString(),
+                    null);
+            try {
+                sleep(Utility.generateRandomDuration());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    public int getRandomDuration(){
-        Random num =new Random();
-        int random=num.nextInt(2000-1000+1)+1000;
-        return random;
+    /**
+     * Generates document id with the given student name and the document name
+     *
+     * @param studentName  Name of the student
+     * @param documentName Name of the document
+     * @return Document ID
+     */
+    private String generateDocumentID(String studentName, String documentName) {
+        return studentName + "_" + documentName;
     }
-    public int getPageNumber(){
-        Random num=new Random();
-        int random=num.nextInt(25-10+1)+10;
-        return random;
-    }
-    @Override
-    public String toString(){
-        return "Name of the student:"+this.getName()+ "\t"+"completed the printing successfully";
 
+    /**
+     * Generates a random page count, within the range of 1 to 20 (inclusive), for documents
+     *
+     * @return Random page count
+     */
+    private int generateRandomPageCount() {
+        return new Random().nextInt(19) + 1;
     }
 }

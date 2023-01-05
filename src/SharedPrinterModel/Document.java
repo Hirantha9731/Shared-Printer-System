@@ -1,39 +1,38 @@
-/**
- * W1715753 | 2017321
- * Hirantha Waas
- */
-
 package SharedPrinterModel;
 
 public class Document {
-    private final String studentName;
-    private final String documentName;
-    private final int numOfPages;
 
-    public Document(String studentName,String documentName,int numberOfPages){
-        this.studentName = studentName;
-        this.documentName = documentName;
-        this.numOfPages = numberOfPages;
+    private final String userID;
+    private final String documentName;
+    private final int numberOfPages;
+
+
+    public Document(String UID, String name, int length) {
+        this.userID = UID;
+        this.documentName = name;
+        this.numberOfPages = length;
     }
 
-    public String getStudentName() {
-        return studentName;
+
+    public String getUserID() {
+        return userID;
     }
 
     public String getDocumentName() {
         return documentName;
     }
 
-    public int getNumOfPages() {
-        return numOfPages;
+    public int getNumberOfPages() {
+        return numberOfPages;
     }
 
-    @Override
+
     public String toString() {
-        return "Document{" +
-                "studentName='" + studentName + '\'' +
-                ", documentName='" + documentName + '\'' +
-                ", numOfPages=" + numOfPages +
-                '}';
+        return new String("Document[ " +
+                "UserID: " + userID + ", " +
+                "Name: " + documentName + ", " +
+                "Pages: " + numberOfPages +
+                "]");
     }
+
 }

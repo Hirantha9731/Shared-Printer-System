@@ -1,36 +1,33 @@
-/**
- * W1715753 | 2017321
- * Hirantha Waas
- */
-
 package SharedPrinterModel;
 
-import java.util.Random;
+import SharedPrinterModel.Interfaces.Printer;
+import SharedPrinterModel.utils.Logger;
+import SharedPrinterModel.utils.Utility;
 
-public class PaperTechnician extends Technician{
-    public PaperTechnician(String name, ThreadGroup group, LaserPrinter laserPrinter) {
-         super(name, group, laserPrinter);
+public class PaperTechnician extends Technician {
+    public PaperTechnician(String name, ThreadGroup threadGroup, Printer printer) {
+        super(name, threadGroup, printer);
     }
 
     @Override
-    public void run(){
-        for (int i=0; i<3;i++){
+    public void run() {
+        for (int i = 0; i < 3; i++) {
             try {
-                // refillPaper
-                this.laserPrinter.refillPaper();
+                Utility.log(
+                        Logger.PAPER_TECHNICIAN,
+                        "Requested to refill paper",
+                        null);
 
-                //thread gets a random sleep
-                sleep(getRandomDuration());
+                ((LaserPrinter) printer).refillPaper();
 
-            }catch (InterruptedException ex){
-                System.out.println(ex.toString());
+                Utility.log(
+                        Logger.PAPER_TECHNICIAN,
+                        "Printer status. " + printer.toString(),
+                        null);
+                sleep(Utility.generateRandomDuration());
+            } catch (InterruptedException e) {
+                Utility.log(Logger.PAPER_TECHNICIAN, e.toString(), false);
             }
         }
-    }
-
-    public int getRandomDuration(){
-        Random num = new Random();
-        int random=num.nextInt(2000-1000+1)+1000;
-        return random;
     }
 }

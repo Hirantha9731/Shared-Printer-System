@@ -1,140 +1,170 @@
-/**
- * W1715753 | 2017321
- * Hirantha Waas
- */
 package SharedPrinterModel;
 
-import SharedPrinterModel.Intefaces.ServicePrinter;
+import SharedPrinterModel.Interfaces.ServicePrinter;
+import SharedPrinterModel.utils.Logger;
+import SharedPrinterModel.utils.Utility;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class LaserPrinter implements ServicePrinter{
-    private int currentPaperCount;
-    private int currentTonerLevel;
-    private int numberOfPrintedDocuments;
-    private final String printerName;
-    private ThreadGroup students;
+/**
+ * Represents the laser printer resource, which is shared within the printing system
+ */
+public class LaserPrinter implements ServicePrinter {
+    private String printerId;
+    private int paperLevel;
+    private int tonerLevel;
+    private int noOfDocumentsPrinted;
+    private ThreadGroup userGroup;
 
-    // Constructor
-    public LaserPrinter(String printerName,ThreadGroup students){
-        this.printerName = printerName;
-        this.currentPaperCount = ServicePrinter.Full_Paper_Stack;
-        this.currentTonerLevel= ServicePrinter.Maximum_Toner_Level;
-        this.numberOfPrintedDocuments = 0;
-        this.students = students;
+    // Reentrant lock with fairness enabled
+    private Lock lock = new ReentrantLock(true);
+    private Condition condition = lock.newCondition();
+
+    public LaserPrinter(String printerId, ThreadGroup userGroup) {
+        this.printerId = printerId;
+        this.paperLevel = Full_Paper_Tray;
+        this.tonerLevel = Full_Toner_Level;
+        this.noOfDocumentsPrinted = 0;
+        this.userGroup = userGroup;
     }
 
-
-    @Override
-    public void printDocument(Document document) {
-        displayMessage(0,0);
-        while (this.currentPaperCount < document.getNumOfPages() || this.currentTonerLevel < document.getNumOfPages()){
-
-            try{
-                this.displayMessage(1,0);
-                wait();
-
-            }catch (InterruptedException ex){
-                System.out.println(ex.toString());
-            }
-        }
-        if (this.currentPaperCount > document.getNumOfPages() && this.currentTonerLevel > document.getNumOfPages()){
-            currentPaperCount -= document.getNumOfPages();
-            currentTonerLevel -= document.getNumOfPages();
-            numberOfPrintedDocuments += 1;
-            displayMessage(2,0);
-        }
-        this.displayMessage(0,0);
-        notifyAll();
-    }
 
     @Override
     public void replaceTonerCartridge() {
-        while (this.currentTonerLevel > LaserPrinter.Maximum_Toner_Level){
-            try {
-                if (this.checkTheAvailabilityOfStudent()) {
-                    displayMessage(5, 0);
-                    wait(5000);
-                } else {
-                    displayMessage(7, 0);
+        lock.lock();
+        try {
+            // Repeatedly check for the need to replace toner cartridge, in 5 seconds time interval
+            while (tonerLevel > Minimum_Toner_Level) {
+                // Check if printer has finished serving all the userGroup
+                if (isPrinterUsageComplete()) {
+                    Utility.log(
+                            Logger.PRINTER,
+                            "Usage of the printer is complete. No need to replace toner cartridge",
+                            false);
                     break;
+                } else {
+                    Utility.log(Logger.PRINTER, toString(), null);
+                    Utility.log(
+                            Logger.PRINTER,
+                            "Toner has not reached the minimum level to be refilled. Waiting to check again",
+                            false);
+                    condition.await(5, TimeUnit.SECONDS);
                 }
-            }catch (InterruptedException ex){
-                System.out.println(ex.toString());
             }
+
+            // Replace toner cartridge if necessary
+            if (tonerLevel < Minimum_Toner_Level) {
+                tonerLevel = Full_Toner_Level;
+                Utility.log(
+                        Logger.PRINTER,
+                        "Replaced toner cartridge",
+                        true);
+                Utility.log(Logger.PRINTER, toString(), null);
+            }
+
+            condition.signalAll();
+        } catch (InterruptedException e) {
+            Utility.log(Logger.PRINTER, e.toString(), false);
+        } finally {
+            lock.unlock();
         }
-        if(this.currentTonerLevel< LaserPrinter.Minimum_Toner_Level){
-            this.currentTonerLevel=LaserPrinter.Maximum_Toner_Level;
-            displayMessage(6,0);
-        }
-        notifyAll();
     }
 
     @Override
     public void refillPaper() {
-
-        while (this.currentPaperCount + LaserPrinter.Papers_Per_Stack> LaserPrinter.Full_Paper_Stack){
-            try {
-                if(this.checkTheAvailabilityOfStudent()){
-                    displayMessage(3,0);
-                    wait(5000);
-                }else{
-                    displayMessage(7,0);
+        lock.lock();
+        try {
+            // Repeatedly check for the need to refill paper, in 5 seconds time interval
+            while (paperLevel + SheetsPerPack > Full_Paper_Tray) {
+                if (isPrinterUsageComplete()) {
+                    Utility.log(
+                            Logger.PRINTER,
+                            "Usage of the printer is complete. No need to refill paper",
+                            false);
                     break;
+                } else {
+                    Utility.log(Logger.PRINTER, toString(), null);
+                    Utility.log(
+                            Logger.PRINTER,
+                            "Refilling paper will exceed the capacity. Waiting to check again",
+                            false);
+                    condition.await(5, TimeUnit.SECONDS);
                 }
-            }catch (InterruptedException ex){
-                System.out.println(ex.toString());
             }
-        }
-        if (this.currentPaperCount+LaserPrinter.Papers_Per_Stack<LaserPrinter.Full_Paper_Stack){
-            int updatedCount = this.currentPaperCount += LaserPrinter.Papers_Per_Stack;
-            this.displayMessage(4,updatedCount);
-        }
-        notifyAll();
 
-    }
+            // Refill paper if necessary
+            if (paperLevel + SheetsPerPack <= Full_Paper_Tray) {
+                paperLevel += SheetsPerPack;
+                Utility.log(
+                        Logger.PRINTER,
+                        "Refilled paper",
+                        true);
+                Utility.log(Logger.PRINTER, toString(), null);
+            }
 
-    //display messages relevant to the case
-    public void displayMessage (int message, int count){
-        switch (message){
-            case 0:
-                System.out.println(this.toString());
-                break;
-            case 1:
-                System.out.println("Please proceed with the printing");
-                break;
-            case 2:
-                System.out.println("Successfully printed the documents");
-                break;
-            case 3:
-                System.out.println("Please refill the papers to the printer");
-                break;
-            case 4:
-                System.out.println("Successfully refilled the papers to the printer");
-                break;
-            case 5:
-                System.out.println("Please refill the toner cartridge");
-                break;
-            case 6:
-                System.out.println("Successfully refilled the toner cartridge");
-                break;
-            case 7:
-                System.out.println("Successfully completed the printing process");
-                break;
-
-        }
-    }
-
-    // checking the availability of the student
-    private boolean checkTheAvailabilityOfStudent(){
-        if(students.activeCount()>0){
-            return true;
-        }else {
-            return false;
+            condition.signalAll();
+        } catch (InterruptedException e) {
+            Utility.log(Logger.PRINTER, e.toString(), false);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
-    public String toString(){
-        return "LaserPrinter{" + "currentPapers = " + currentPaperCount + ", currentToner = " + currentTonerLevel + ", printedDocuments = " + numberOfPrintedDocuments + ", printerName = " + printerName + '}';
+    public void printDocument(Document document) {
+        lock.lock();
+
+        try {
+            Utility.log(Logger.PRINTER, toString(), null);
+
+            // When resources are insufficient, wait until resources become sufficient
+            while (paperLevel < document.getNumberOfPages() || tonerLevel < document.getNumberOfPages()) {
+                String message;
+                if (paperLevel < document.getNumberOfPages()) {
+                    message = "Insufficient Papers. Waiting until refilled";
+                } else if (tonerLevel < document.getNumberOfPages()) {
+                    message = "Insufficient Toner level. Waiting until cartridge is replaced";
+                } else {
+                    message = "Insufficient Papers & Toner level. Waiting until they become available";
+                }
+                Utility.log(Logger.PRINTER, message, false);
+                condition.await();
+            }
+
+            // Print document if resources are sufficient
+            if (paperLevel >= document.getNumberOfPages() && tonerLevel >= document.getNumberOfPages()) {
+                paperLevel -= document.getNumberOfPages();
+                tonerLevel -= document.getNumberOfPages();
+                noOfDocumentsPrinted++;
+                Utility.log(Logger.PRINTER, "Printed document: " + document, true);
+                Utility.log(Logger.PRINTER, toString(), null);
+            }
+
+            condition.signalAll();
+        } catch (InterruptedException e) {
+            Utility.log(Logger.PRINTER, e.toString(), false);
+        } finally {
+            lock.unlock();
+        }
     }
 
+    @Override
+    public String toString() {
+        return "[ PrinterID: " + printerId +
+                ", Paper Level: " + paperLevel +
+                ", Toner Level: " + tonerLevel +
+                ", Documents Printed: " + noOfDocumentsPrinted + " ]";
+    }
+
+    /**
+     * Checks whether the usage of the printer is over,
+     * in order to avoid waiting in time intervals and re-checking for replacing toner cartridge / refilling paper
+     *
+     * @return Whether the usage of the printer is over or not
+     */
+    private boolean isPrinterUsageComplete() {
+        return userGroup.activeCount() == 0;
+    }
 }

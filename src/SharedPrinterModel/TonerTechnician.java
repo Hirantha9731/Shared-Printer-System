@@ -1,33 +1,36 @@
-/**
- * W1715753 | 2017321
- * Hirantha Waas
- */
 package SharedPrinterModel;
 
-import java.util.Random;
+import SharedPrinterModel.Interfaces.Printer;
+import SharedPrinterModel.utils.Logger;
+import SharedPrinterModel.utils.Utility;
 
-public class TonerTechnician extends Technician{
-
-    public TonerTechnician(String name, ThreadGroup group, LaserPrinter laserPrinter) {
-        super(name, group, laserPrinter);
+/**
+ * Represents the toner technician, who replaces the cartridge of the printer
+ */
+public class TonerTechnician extends Technician {
+    public TonerTechnician(String name, ThreadGroup threadGroup, Printer printer) {
+        super(name, threadGroup, printer);
     }
 
     @Override
-    public void run(){
-        for (int i=0;i<3;i++){
+    public void run() {
+        for (int i = 0; i < 3; i++) {
             try {
-                //replaceTonerCartridge
-                this.laserPrinter.replaceTonerCartridge();
-                //thread gets a random sleep
-                sleep(getRandomDuration());
-            }catch (InterruptedException ex){
-                System.out.println(ex.getMessage());
+                Utility.log(
+                        Logger.TONER_TECHNICIAN,
+                        "Requested to replace toner",
+                        null);
+
+                ((LaserPrinter) printer).replaceTonerCartridge();
+
+                Utility.log(
+                        Logger.TONER_TECHNICIAN,
+                        "Printer status. " + printer.toString(),
+                        null);
+                sleep(Utility.generateRandomDuration());
+            } catch (InterruptedException e) {
+                Utility.log(Logger.TONER_TECHNICIAN, e.toString(), false);
             }
         }
-    }
-    public int getRandomDuration(){
-        Random num=new Random();
-        int random=num.nextInt(2000-1000+1)+1000;
-        return random;
     }
 }

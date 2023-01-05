@@ -1,14 +1,11 @@
-/**
- * W1715753 | 2017321
- * Hirantha Waas
- */
-
-package SharedPrinterModel.Intefaces;
-
+package SharedPrinterModel.Interfaces;
 
 import SharedPrinterModel.Document;
 
 public interface Printer {
 
+    // print the "document"
     public void printDocument(Document document);
-}
+
+} // Printer
+
